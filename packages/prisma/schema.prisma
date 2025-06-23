@@ -1,0 +1,459 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccessLevel {
+  READ
+  WRITE
+  DELETE
+  MANAGE
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+  JPY
+  ETB
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AuthProvider {
+  GOOGLE
+  GITHUB
+  CREDENTIALS
+}
+
+enum Interval {
+  MONTHLY
+  YEARLY
+}
+
+enum TaskStatus {
+  IN_QUEUE
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETRY
+}
+
+enum TaskType {
+  SEO_SCRAPE
+  REVIEW_SCRAPE
+}
+
+enum TaskStage {
+  // seo stages
+  SITE_FINDING
+  TLS_SSL_CHECKS
+  CONFIGURATION_LOADING
+  SCRAPING
+  AI_ANALYSIS
+  REPORT_GENERATION
+
+  // review stages
+  SOURCE_IDENTIFICATION
+  SCRAPING_TRUSTPILOT
+  SCRAPING_GOOGLE
+  NORMALIZATION
+  AI_SENTIMENT_ANALYSIS
+  REVIEW_REPORT_GENERATION
+}
+
+enum ReviewSource {
+  TRUSTPILOT
+  GOOGLE
+  OTHER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INACTIVE
+}
+
+enum NotificationPreference {
+  EMAIL
+  SMS
+  NONE
+}
+
+enum LanguagePreference {
+  EN
+  ES
+  FR
+  DE
+  ZH
+  AM
+}
+
+enum ReportType {
+  SEO
+  REVIEW
+}
+
+model User {
+  id               String        @id @default(uuid())
+  email            String        @unique
+  name             String?
+  password         String?
+  emailVerified    Boolean       @default(false)
+  image            String?
+  totpSecret       String?
+  twoFactorEnabled Boolean       @default(false)
+  backupCodes      Json          @default("[]")
+  sessions         Session[]
+  accounts         Account[]
+  status           UserStatus    @default(ACTIVE)
+  roles            Role[]
+  Subscription     Subscription?
+  profile          Profile?
+  projects         Project[]
+  seoReports       SeoReport[]
+  reports          Report[]
+  AuthMethod       AuthMethod[]
+  TwoFactor        TwoFactor?
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Feedback  Feedback[]
+
+  @@index([email])
+}
+
+model TwoFactor {
+  id          String @id
+  userId      String @unique
+  secret      String
+  backupCodes String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  password              String?
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([accountId, providerId])
+}
+
+model Profile {
+  id                     String                 @id @default(uuid())
+  userId                 String                 @unique
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName              String
+  lastName               String
+  email                  String
+  contactNumber          String?
+  countryId              String?
+  cityId                 String?
+  country                Country?               @relation(fields: [countryId], references: [id])
+  city                   City?                  @relation(fields: [cityId], references: [id])
+  notificationPreference NotificationPreference @default(EMAIL)
+  languagePreference     LanguagePreference     @default(EN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Country {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  cities    City[]
+  profiles  Profile[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model City {
+  id        String    @id @default(cuid())
+  name      String
+  countryId String
+  country   Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  profiles  Profile[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([name, countryId])
+}
+
+model AuthMethod {
+  id         String       @id @default(uuid())
+  provider   AuthProvider
+  providerId String?
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([provider, providerId])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String       @default("")
+  users       User[]
+  permissions Permission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id          String      @id @default(cuid())
+  entity      String
+  action      String
+  access      AccessLevel
+  description String      @default("")
+  roles       Role[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([action, entity, access])
+}
+
+model Plan {
+  id            String         @id @unique
+  name          String
+  description   String?
+  prices        Price[]
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Price {
+  id            String         @id @unique
+  plan          Plan           @relation(fields: [planId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  planId        String
+  amount        Int
+  currency      Currency
+  interval      Interval
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subscription {
+  id                 String             @id @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId             String             @unique
+  plan               Plan               @relation(fields: [planId], references: [id])
+  planId             String
+  price              Price              @relation(fields: [priceId], references: [id])
+  priceId            String
+  interval           Interval
+  status             SubscriptionStatus
+  currentPeriodStart Int
+  currentPeriodEnd   Int
+  cancelAtPeriodEnd  Boolean            @default(false)
+  billingInfo        Json?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domains     Domain[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Domain {
+  id         String      @id @default(uuid())
+  url        String
+  projectId  String
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+  seoReports SeoReport[]
+  keywords   Keyword[]
+  reviews    Review[]
+  reports    Report[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Task {
+  id           String     @id @default(uuid())
+  type         TaskType
+  stage        TaskStage?
+  status       TaskStatus @default(PENDING)
+  payload      Json
+  domainId     String
+  domain       Domain     @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  priority     Int        @default(0)
+  retryCount   Int        @default(0)
+  maxRetries   Int        @default(3)
+  lastError    String?
+  processingAt DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model SeoReport {
+  id               String           @id @default(uuid())
+  domainId         String
+  domain           Domain           @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportId         String?
+  report           Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  organicTraffic   Int?
+  organicKeywords  Int?
+  siteAuditScore   Int?
+  siteAuditIssues  Int?
+  backlinks        Int?
+  referringDomains Int?
+  authorityScore   Float?
+  pageLoadTime     Float?
+  mobileFriendly   Boolean?
+  data             Json?
+  keywordRankings  KeywordRanking[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Keyword {
+  id                String           @id @default(uuid())
+  domainId          String
+  domain            Domain           @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  keyword           String?
+  searchVolume      Int?
+  keywordEfficiency Float?
+  rankings          KeywordRanking[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model KeywordRanking {
+  id          String    @id @default(uuid())
+  keywordId   String
+  keyword     Keyword   @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  seoReportId String
+  seoReport   SeoReport @relation(fields: [seoReportId], references: [id], onDelete: Cascade)
+  position    Int?
+  region      String?
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Review {
+  id         String       @id @default(uuid())
+  domainId   String
+  domain     Domain       @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  reportId   String?
+  report     Report?      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  source     ReviewSource
+  externalId String?
+  rating     Float
+  title      String?
+  content    String?
+  authorName String?
+  imageUrl   String?
+  reviewDate DateTime?
+  sentiment  String?
+  engagement Int?
+  data       Json?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([domainId, source, externalId])
+}
+
+model Report {
+  id         String      @id @default(uuid())
+  type       ReportType
+  title      String
+  domainId   String
+  domain     Domain      @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seoReports SeoReport[] @relation
+  reviews    Review[]    @relation
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  Feedback   Feedback[]
+}
+
+model Feedback {
+  id                      String     @id @default(uuid())
+  userId                  String
+  user                    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportId                String
+  report                  Report     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportType              ReportType
+  organicTrafficRating    Float?
+  organicKeywordsRating   Float?
+  siteAuditScoreRating    Float?
+  backlinksRating         Float?
+  averageRatingRating     Float?
+  totalReviewsRating      Float?
+  positiveSentimentRating Float?
+  negativeSentimentRating Float?
+  comments                String?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  @@unique([userId, reportId])
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../../packages/prisma/tsconfig.json" },
+    { "path": "../../packages/queue/tsconfig.json" },
+    { "path": "../../packages/logging/tsconfig.json" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@seo-analyzer/queue",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --outDir dist",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "bullmq": "^4.12.4",
+    "ioredis": "^5.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.3",
+    "typescript": "^5.3.2"
+  }
+}

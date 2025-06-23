@@ -1,0 +1,26 @@
+{
+  "name": "@seo-analyzer/worker-seo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@seo-analyzer/prisma": "workspace:*",
+    "@seo-analyzer/queue": "workspace:*",
+    "@seo-analyzer/logging": "workspace:*",
+    "puppeteer": "^24.9.0",
+    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "bullmq": "^4.12.4"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.2"
+  }
+}

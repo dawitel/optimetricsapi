@@ -1,0 +1,24 @@
+{
+  "name": "@seo-analyzer/prisma",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
+  "scripts": {
+    "build": "tsc --outDir dist",
+    "clean": "rm -rf dist",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push --skip-generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "ts-node seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.3",
+    "prisma": "^6.8.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.2"
+  }
+}
